@@ -1,0 +1,490 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ColorID">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1f6f5c">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head><body>
+<title>ColorID</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Red+Hat+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-screen instrument. Viewfinder on top, readout tray below. */
+:root{
+  --bg:#eef0ee; --panel:#ffffff; --fg:#151a17; --muted:#5d6762; --line:#d3d8d4; --accent:#1f6f5c; --chip:#f4f6f4;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif; --mono:"Red Hat Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1311; --panel:#181d1a; --fg:#e8ece9; --muted:#97a29c; --line:#2b332f; --accent:#5cc4a7; --chip:#202723; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1311; --panel:#181d1a; --fg:#e8ece9; --muted:#97a29c; --line:#2b332f; --accent:#5cc4a7; --chip:#202723; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--display);display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px;gap:12px;box-sizing:border-box;max-width:560px;margin:0 auto}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+h1{font-size:22px;margin:0;font-weight:900;font-stretch:125%;letter-spacing:-.02em;line-height:1}
+h1 em{font-style:normal;color:var(--accent)}
+.mode{font-family:var(--display);font-stretch:70%;font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.finder{position:relative;flex:1 1 auto;min-height:240px;border-radius:14px;overflow:hidden;background:#000;touch-action:none}
+.finder video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.finder canvas.photo{position:absolute;inset:0;width:100%;height:100%}
+.loupe{position:absolute;right:12px;top:12px;width:84px;height:84px;border-radius:10px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);pointer-events:none}
+.zoom{position:absolute;right:12px;top:104px;background:rgba(0,0,0,.55);color:#fff;border-radius:999px;padding:3px 8px;font:12px var(--mono);pointer-events:none}
+.cross{position:absolute;left:50%;top:50%;width:64px;height:64px;transform:translate(-50%,-50%);pointer-events:none}
+.cross::before,.cross::after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.55)}
+.cross::before{left:50%;top:0;bottom:0;width:2px;margin-left:-1px;clip-path:polygon(0 0,100% 0,100% 38%,0 38%,0 62%,100% 62%,100% 100%,0 100%)}
+.cross::after{top:50%;left:0;right:0;height:2px;margin-top:-1px;clip-path:polygon(0 0,38% 0,38% 100%,0 100%,0 0,62% 0,100% 0,100% 100%,62% 100%)}
+.cross .box{position:absolute;left:50%;top:50%;width:12px;height:12px;transform:translate(-50%,-50%);border:2px solid #fff;outline:1px solid rgba(0,0,0,.55)}
+.live{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.55);color:#fff;border-radius:999px;padding:6px 10px 6px 6px;font-family:var(--mono);font-size:13px}
+.live i{width:22px;height:22px;border-radius:50%;border:2px solid #fff;display:block}
+.torch{position:absolute;right:12px;top:12px;background:rgba(0,0,0,.55);color:#fff;border:2px solid transparent;border-radius:999px;padding:6px 12px;font:650 13px var(--display);font-stretch:87.5%;cursor:pointer}
+.torch[aria-pressed="true"]{background:#fff3b0;color:#1a1a1a;border-color:#fff}
+.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#e8ece9;text-align:center;padding:24px;font-size:15px;line-height:1.4}
+.empty small{color:#a9b3ad;font-size:12px;max-width:30ch}
+.controls{display:flex;align-items:center;justify-content:center;gap:20px}
+.shutter{width:72px;height:72px;border-radius:50%;border:4px solid var(--fg);background:var(--panel);cursor:pointer;display:grid;place-items:center;padding:0}
+.shutter span{width:54px;height:54px;border-radius:50%;background:var(--accent);display:block;transition:transform .1s}
+.shutter:active span{transform:scale(.9)}
+.btn{font:650 14px var(--display);font-stretch:87.5%;color:var(--fg);background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;min-width:84px}
+.btn:focus-visible,.shutter:focus-visible,.code:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tray{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px}
+.swatch{border-radius:10px;border:1px solid var(--line);height:64px}
+.codes{grid-template-columns:1fr 1fr}
+@media (max-width:420px){.codes{grid-template-columns:1fr}}
+.codes{display:grid;gap:6px;min-width:0}
+.code{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer;font:inherit;color:inherit;text-align:left;min-width:0}
+.code b{font:700 12px var(--display);font-stretch:70%;letter-spacing:.08em;color:var(--muted);flex:none;width:40px}
+.code span{font:500 15px var(--mono);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.code em{font:600 12px var(--display);font-stretch:75%;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);flex:none}
+.history{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;min-height:34px;align-items:center}
+.history button{flex:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;padding:0}
+.history p{margin:0;font-size:12px;color:var(--muted)}
+.note{font-size:11px;color:var(--muted);margin:0;line-height:1.4}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.calib{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);line-height:1.35}
+.calib span{flex:1;min-width:0}
+.calib.on span{color:var(--accent)}
+.calib .btn{flex:none;min-width:0}
+.btn.link{background:none;border-color:transparent;color:var(--accent);padding-inline:6px}
+.raw{grid-column:1/-1;font:400 11px var(--mono);color:var(--muted);margin:0}
+.named{grid-column:1/-1;display:flex;align-items:center;gap:10px;font-size:15px;min-width:0}
+.named b{font-weight:800;font-stretch:110%}
+.named i{width:18px;height:18px;border-radius:50%;border:1px solid var(--line);flex:none}
+.named span{font-size:12px;color:var(--muted)}
+.contrast{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pair{display:flex;align-items:center;gap:8px;border-radius:8px;padding:8px 10px;border:1px solid var(--line);font-size:12px;min-width:0}
+.pair.light{background:#fff;color:#151a17}.pair.dark{background:#000;color:#f2f2f2}
+.pair .sample{font:900 22px var(--display);font-stretch:110%;flex:none}
+.pair b{font:600 13px var(--mono)}
+.pair span:nth-child(2){flex:1;min-width:0}
+.pair .grade{font:700 11px var(--display);font-stretch:70%;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:999px;flex:none;background:#c62f2f;color:#fff}
+.pair .grade[data-pass="true"]{background:#1f7a4d}
+.quality{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.6);color:#fff;border-radius:10px;padding:6px 10px;font-size:12px}
+.quality .bar{flex:none;width:56px;height:6px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden}
+.quality .bar i{display:block;height:100%;width:0;background:#4cc38a;transition:width .2s}
+.quality[data-level="fair"] .bar i{background:#e8b33a}
+.quality[data-level="poor"] .bar i{background:#e5484d}
+.quality b{flex:none}
+.quality span{flex:1;min-width:0;color:#d7ddd9;line-height:1.3}
+.opts{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{font:650 13px var(--display);font-stretch:87.5%;background:var(--chip);color:var(--fg);border:0;padding:8px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.shutter[disabled] span{opacity:.5}
+.check{grid-column:1/-1;border-top:1px solid var(--line);padding-top:8px;font-size:13px}
+.check summary{cursor:pointer;color:var(--accent);font-weight:600}
+.check .row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.check input[type=color]{width:40px;height:34px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--chip)}
+.check input[type=text]{font:400 14px var(--mono);width:9ch;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--fg)}
+.check p{margin:8px 0 0;color:var(--muted);line-height:1.4}
+.check p b{color:var(--fg)}
+input[type=file]{display:none}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header><h1>Color<em>ID</em></h1><span class="mode" id="mode">Starting camera…</span></header>
+
+<div class="finder" id="finder">
+  <video id="video" playsinline muted autoplay hidden></video>
+  <canvas class="photo" id="photo" hidden></canvas>
+  <div class="cross" id="cross" hidden><div class="box"></div></div>
+  <div class="live" id="live" hidden><i id="liveDot"></i><span id="liveHex">#------</span></div>
+  <canvas class="loupe" id="loupe" width="168" height="168" hidden aria-hidden="true"></canvas>
+  <span class="zoom" id="zoom" hidden>Pinch to zoom</span>
+  <div class="quality" id="quality" hidden data-level="good"><div class="bar"><i id="qBar"></i></div><b id="qLabel">Good light</b><span id="qWhy"></span></div>
+  <button class="torch" id="torch" aria-pressed="false" hidden>Light off</button>
+  <div class="empty" id="empty">
+    <div id="emptyMsg">Point your camera at a colour, line it up in the crosshair, then press the shutter.</div>
+    <label class="btn" for="file">Take a photo</label>
+    <small id="emptyHint">If live camera isn't allowed here, take a photo instead and tap the spot you want. Your camera's own flash button works there.</small>
+  </div>
+</div>
+
+<div class="controls">
+  <label class="btn" for="file" id="photoBtn">Photo</label>
+  <button class="shutter" id="shutter" aria-label="Capture colour under crosshair"><span></span></button>
+  <button class="btn" id="liveBtn">Live</button>
+</div>
+<div class="opts"><span>Patch size</span>
+  <div class="seg" role="group" aria-label="Patch size">
+    <button data-size="5" aria-pressed="true">Small</button><button data-size="15" aria-pressed="false">Medium</button><button data-size="31" aria-pressed="false">Large</button>
+  </div>
+</div>
+<div class="calib">
+  <button class="btn" id="calBtn">Calibrate on white</button>
+  <span id="calStatus">Not calibrated. Aim at plain white paper in the same light, then tap Calibrate.</span>
+  <button class="btn link" id="calReset" hidden>Reset</button>
+</div>
+<input type="file" id="file" accept="image/*" capture="environment">
+
+<section class="tray" aria-live="polite">
+  <div class="swatch" id="swatch" style="background:#1f6f5c"></div>
+  <div class="codes">
+    <button class="code" data-k="hex"><b>HEX</b><span id="hex">#1F6F5C</span><em>Copy</em></button>
+    <button class="code" data-k="rgb"><b>RGB</b><span id="rgb">rgb(31, 111, 92)</span><em>Copy</em></button>
+    <button class="code" data-k="hsl"><b>HSL</b><span id="hsl">hsl(166, 56%, 28%)</span><em>Copy</em></button>
+    <button class="code" data-k="cmyk"><b>CMYK</b><span id="cmyk">72, 0, 17, 56</span><em>Copy</em></button>
+  </div>
+  <p class="raw" id="raw" hidden></p>
+  <div class="named"><i id="nameDot"></i><div><b id="name">Teal</b> <span id="nameNote"></span></div></div>
+  <div class="contrast">
+    <div class="pair light" id="cW"><span class="sample">Aa</span><span><b class="ratio">-</b> on white</span><span class="grade"></span></div>
+    <div class="pair dark" id="cB"><span class="sample">Aa</span><span><b class="ratio">-</b> on black</span><span class="grade"></span></div>
+  </div>
+  <details class="check" id="check">
+    <summary>Check accuracy against a known colour</summary>
+    <div class="row">
+      <input type="color" id="refPick" value="#ffffff" aria-label="Pick the known colour">
+      <input type="text" id="refHex" value="#FFFFFF" maxlength="7" aria-label="Known colour HEX" autocomplete="off" spellcheck="false">
+      <span>then scan that colour</span>
+    </div>
+    <p id="checkOut">Enter the HEX printed on a paint chip or shown on another screen, scan it, and see how far off the reading is.</p>
+  </details>
+</section>
+
+<div class="history" id="history"><p>Example colour shown. Your captures appear here.</p></div>
+<p class="note">Each capture averages the patch under the crosshair over several video frames. Phone cameras adjust white balance and exposure, so readings are close but not exact. For best results use even daylight and fill the crosshair with the colour. A phone light helps in dim rooms but is a cool white, so it can tint readings blue and glare on glossy surfaces; tilt the phone if you see a bright spot.</p>
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const video=$('video'),photo=$('photo'),cross=$('cross'),finder=$('finder');
+const work=document.createElement('canvas'),wctx=work.getContext('2d',{willReadFrequently:true});
+let SAMPLE=5;
+let source=null; // 'live' | 'photo'
+let stream=null, live=[31,111,92], current=[31,111,92];
+let pt={x:.5,y:.5}; // crosshair position as fraction of finder (photo mode)
+
+const hex2=n=>n.toString(16).padStart(2,'0').toUpperCase();
+function codes([r,g,b]){
+  const hex='#'+hex2(r)+hex2(g)+hex2(b);
+  const R=r/255,G=g/255,B=b/255,mx=Math.max(R,G,B),mn=Math.min(R,G,B),d=mx-mn,l=(mx+mn)/2;
+  let h=0,s=0;
+  if(d){s=d/(1-Math.abs(2*l-1));
+    h=mx===R?((G-B)/d)%6:mx===G?(B-R)/d+2:(R-G)/d+4;h=Math.round(h*60);if(h<0)h+=360}
+  const k=1-mx,c=k<1?(1-R-k)/(1-k):0,m=k<1?(1-G-k)/(1-k):0,y=k<1?(1-B-k)/(1-k):0;
+  const p=v=>Math.round(v*100);
+  return{hex,rgb:`rgb(${r}, ${g}, ${b})`,hsl:`hsl(${h}, ${p(s)}%, ${p(l)}%)`,cmyk:`${p(c)}, ${p(m)}, ${p(y)}, ${p(k)}`};
+}
+function show(rgb){
+  extras(rgb);
+  current=rgb;const c=codes(rgb);
+  $('swatch').style.background=c.hex;
+  for(const k of['hex','rgb','hsl','cmyk'])$(k).textContent=c[k];
+}
+function avg(ctx,cx,cy,w,h){
+  const half=SAMPLE>>1,x=Math.max(0,Math.min(w-SAMPLE,Math.round(cx)-half)),y=Math.max(0,Math.min(h-SAMPLE,Math.round(cy)-half));
+  const d=ctx.getImageData(x,y,SAMPLE,SAMPLE).data,n=d.length/4;let r=0,g=0,b=0,rr=0,gg=0,bb=0,clip=0;
+  for(let i=0;i<d.length;i+=4){const R=d[i],G=d[i+1],B=d[i+2];r+=R;g+=G;b+=B;rr+=R*R;gg+=G*G;bb+=B*B;if(Math.max(R,G,B)>=250&&Math.min(R,G,B)>=230)clip++}
+  const out=[Math.round(r/n),Math.round(g/n),Math.round(b/n)];
+  // average per-channel standard deviation inside the patch, and share of blown pixels
+  const sd=(s,ss)=>Math.sqrt(Math.max(0,ss/n-(s/n)**2));
+  out.std=(sd(r,rr)+sd(g,gg)+sd(b,bb))/3;out.clip=clip/n;return out;
+}
+// Map a point in the finder box to source pixels, honouring object-fit: cover.
+function toSource(sw,sh,fx,fy){
+  const W=finder.clientWidth,H=finder.clientHeight,sc=Math.max(W/sw,H/sh);
+  const box=cross.querySelector('.box'),px=Math.max(10,Math.round(SAMPLE*sc))+'px';if(box.style.width!==px){box.style.width=px;box.style.height=px}
+  const ox=(W-sw*sc)/2,oy=(H-sh*sc)/2;
+  return[(fx*W-ox)/sc,(fy*H-oy)/sc];
+}
+function sampleLive(){
+  const w=video.videoWidth,h=video.videoHeight;if(!w)return null;
+  if(work.width!==w||work.height!==h){work.width=w;work.height=h}
+  wctx.drawImage(video,0,0,w,h);
+  const[sx,sy]=toSource(w,h,.5,.5);return avg(wctx,sx,sy,w,h);
+}
+function samplePhoto(){
+  return avg(wctx,view.cx,view.cy,work.width,work.height);
+}
+// White-card calibration: scale each channel in linear light so the paper reads as neutral white.
+let gain=null;
+const toLin=v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+const toSrgb=v=>{v=Math.min(1,Math.max(0,v));return Math.round(255*(v<=.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-.055))};
+function correct(rgb){return gain?rgb.map((v,i)=>toSrgb(toLin(v)*gain[i])):rgb}
+function clearCal(why){
+  if(!gain)return;gain=null;$('calReset').hidden=true;$('raw').hidden=true;
+  document.querySelector('.calib').classList.remove('on');
+  $('calStatus').textContent='Not calibrated. Aim at plain white paper in the same light, then tap Calibrate.';
+  if(why)toast(why);
+}
+function calibrate(){
+  if(!source){toast('Start the camera or take a photo first');return}
+  const w=source==='live'?sampleLive():samplePhoto();if(!w)return;
+  const mx=Math.max(...w),mn=Math.min(...w);
+  if(mx<50){toast('Too dark to calibrate. Add light or move closer');return}
+  if(mx>=254){toast('White is overexposed. Tilt away from glare and try again');return}
+  if(mn<mx*.45){toast('That doesn’t look white. Aim at plain white paper');return}
+  // Paper is about 90% reflective, so map it to 0.9 linear rather than pure white.
+  gain=w.map(v=>Math.min(8,.9/Math.max(toLin(v),1e-4)));
+  $('calReset').hidden=false;document.querySelector('.calib').classList.add('on');
+  $('calStatus').textContent='Calibrated to '+codes(w).hex+' white. Readings are corrected for this light.';
+  toast('Calibrated');
+}
+$('calBtn').addEventListener('click',calibrate);
+$('calReset').addEventListener('click',()=>clearCal('Calibration cleared'));
+// Reading quality: brightness, glare, evenness of the patch, and steadiness across frames.
+function quality(st,spread=0){
+  const mx=Math.max(st[0],st[1],st[2]);let score=100;const why=[];
+  if(st.clip>.02){score-=st.clip>.2?60:35;why.push('glare or blown highlight, tilt the phone')}
+  if(mx<45){score-=mx<25?55:30;why.push('too dark, add light')}
+  if(st.std>14){score-=st.std>28?35:18;why.push('uneven patch, fill it with one colour or use a smaller patch')}
+  if(spread>5){score-=spread>12?30:15;why.push('hold steady')}
+  score=Math.max(5,score);
+  return{score,level:score>=75?'good':score>=45?'fair':'poor',why};
+}
+let qTick=0;
+function showQuality(q){
+  const el=$('quality');el.hidden=false;el.dataset.level=q.level;$('qBar').style.width=q.score+'%';
+  $('qLabel').textContent=q.level==='good'?'Good reading':q.level==='fair'?'Fair reading':'Poor reading';
+  $('qWhy').textContent=q.why[0]||'';
+}
+function setLive(raw){if(raw.std!==undefined&&(source==='photo'||++qTick%6===0))showQuality(quality(raw));const rgb=correct(raw);live=raw;const c=codes(rgb);$('liveDot').style.background=c.hex;$('liveHex').textContent=c.hex}
+function loop(){
+  if(source==='live'){const v=sampleLive();if(v)setLive(v)}
+  requestAnimationFrame(loop);
+}
+function placeCross(){cross.style.left=(pt.x*100)+'%';cross.style.top=(pt.y*100)+'%'}
+
+async function startCamera(){
+  if(!navigator.mediaDevices?.getUserMedia){noCamera('This browser has no live camera access.');return}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+    video.srcObject=stream;await video.play().catch(()=>{});
+    source='live';pt={x:.5,y:.5};placeCross();
+    video.hidden=false;photo.hidden=true;cross.hidden=false;$('live').hidden=false;$('empty').hidden=true;
+    $('mode').textContent='Live camera';
+    setupTorch();
+  }catch(e){noCamera('Live camera is blocked here.')}
+}
+// Torch: Android Chrome exposes it as a track constraint; iPhone browsers generally don't.
+let torchOn=false,lockTimer=0;
+function track(){return stream?.getVideoTracks()[0]}
+function caps(){try{return track()?.getCapabilities?.()||{}}catch{return{}}}
+function setupTorch(){
+  torchOn=false;const b=$('torch');b.setAttribute('aria-pressed','false');b.textContent='Light off';
+  // Some phones only report torch after the stream has run briefly.
+  setTimeout(()=>{if(caps().torch)b.hidden=false;else $('mode').textContent='Live · no light control, use Photo for flash'},600);
+}
+async function setTorch(on){
+  const t=track(),c=caps();if(!t||!c.torch)return;
+  clearTimeout(lockTimer);
+  try{
+    // Release locks first so the camera re-meters for the new light.
+    const free={};if(c.exposureMode?.includes('continuous'))free.exposureMode='continuous';if(c.whiteBalanceMode?.includes('continuous'))free.whiteBalanceMode='continuous';
+    await t.applyConstraints({advanced:[{torch:on,...free}]});
+    clearCal(gain?'Light changed, so calibrate again on white':null);
+    torchOn=on;const b=$('torch');b.setAttribute('aria-pressed',String(on));b.textContent=on?'Light on':'Light off';
+    if(on){
+      // Let exposure and white balance settle under the torch, then freeze them so readings stay consistent.
+      lockTimer=setTimeout(async()=>{
+        const lock={};if(c.exposureMode?.includes('manual'))lock.exposureMode='manual';if(c.whiteBalanceMode?.includes('manual'))lock.whiteBalanceMode='manual';
+        if(Object.keys(lock).length){try{await t.applyConstraints({advanced:[lock]});toast('Light on · exposure locked')}catch{toast('Light on')}}else toast('Light on');
+      },900);
+    }
+  }catch{toast('This phone would not switch the light on')}
+}
+$('torch').addEventListener('pointerdown',e=>e.stopPropagation());
+$('torch').addEventListener('click',()=>setTorch(!torchOn));
+function noCamera(why){
+  source=source==='photo'?'photo':null;
+  if(source!=='photo'){$('emptyMsg').textContent=why+' Take a photo, then tap the spot you want to read.';$('mode').textContent='Photo mode'}
+  else toast(why);
+}
+function stopCamera(){$('loupe').hidden=true;$('zoom').hidden=true;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('torch').hidden=true;torchOn=false}
+
+// Photo mode: the crosshair stays centred; drag to pan and pinch (or double-tap) to zoom the photo under it.
+let view={z:1,cx:0,cy:0};
+const pctx=photo.getContext('2d');
+function baseScale(){return Math.max(finder.clientWidth/work.width,finder.clientHeight/work.height)}
+function clampView(){
+  view.z=Math.min(60,Math.max(1,view.z));
+  view.cx=Math.min(work.width-1,Math.max(0,view.cx));view.cy=Math.min(work.height-1,Math.max(0,view.cy));
+}
+function drawPhoto(){
+  if(source!=='photo')return;
+  const W=finder.clientWidth,H=finder.clientHeight,dpr=Math.min(3,devicePixelRatio||1);
+  if(photo.width!==Math.round(W*dpr)||photo.height!==Math.round(H*dpr)){photo.width=Math.round(W*dpr);photo.height=Math.round(H*dpr)}
+  const sc=baseScale()*view.z;
+  pctx.setTransform(dpr,0,0,dpr,0,0);pctx.fillStyle='#000';pctx.fillRect(0,0,W,H);
+  pctx.imageSmoothingEnabled=sc<3; // show real pixels when zoomed in
+  pctx.drawImage(work,W/2-view.cx*sc,H/2-view.cy*sc,work.width*sc,work.height*sc);
+  const box=cross.querySelector('.box'),px=Math.max(10,Math.round(SAMPLE*sc))+'px';box.style.width=px;box.style.height=px;
+  $('zoom').textContent=view.z<1.05?'Pinch to zoom':view.z.toFixed(view.z<10?1:0)+'×';
+  drawLoupe();setLive(samplePhoto());
+}
+function drawLoupe(){
+  const L=$('loupe'),c=L.getContext('2d'),n=Math.max(11,SAMPLE+6)|1,sz=L.width;
+  const x0=Math.round(view.cx)-(n>>1),y0=Math.round(view.cy)-(n>>1),cell=sz/n;
+  c.imageSmoothingEnabled=false;c.fillStyle='#000';c.fillRect(0,0,sz,sz);
+  c.drawImage(work,x0,y0,n,n,0,0,sz,sz);
+  const a=(n-SAMPLE)/2*cell;c.strokeStyle='#fff';c.lineWidth=2;c.strokeRect(a,a,SAMPLE*cell,SAMPLE*cell);
+  c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=1;c.strokeRect(a-1.5,a-1.5,SAMPLE*cell+3,SAMPLE*cell+3);
+}
+$('file').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const img=new Image();
+  img.onload=()=>{
+    stopCamera();
+    // Keep up to 12 MP so zooming shows real detail (iPhone canvas limit is ~16 MP).
+    const sc=Math.min(1,Math.sqrt(12e6/(img.width*img.height)));
+    work.width=Math.round(img.width*sc);work.height=Math.round(img.height*sc);
+    wctx.drawImage(img,0,0,work.width,work.height);
+    clearCal(gain?'New photo, so calibrate again on white':null);
+    source='photo';pt={x:.5,y:.5};placeCross();view={z:1,cx:work.width/2,cy:work.height/2};
+    video.hidden=true;photo.hidden=false;cross.hidden=false;$('live').hidden=false;$('empty').hidden=true;$('loupe').hidden=false;$('zoom').hidden=false;
+    $('mode').textContent='Photo · drag & pinch to aim';
+    drawPhoto();URL.revokeObjectURL(img.src);
+  };
+  img.src=URL.createObjectURL(f);e.target.value='';
+});
+const ptrs=new Map();let pinch=null,lastTap=0;
+finder.addEventListener('pointerdown',e=>{
+  if(source!=='photo')return;finder.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:view.z}}
+  if(ptrs.size===1){const t=performance.now();if(t-lastTap<300){view.z*=2.5;clampView();drawPhoto();lastTap=0}else lastTap=t}
+});
+finder.addEventListener('pointermove',e=>{
+  if(source!=='photo'||!ptrs.has(e.pointerId))return;
+  const prev=ptrs.get(e.pointerId),now={x:e.clientX,y:e.clientY};ptrs.set(e.pointerId,now);
+  const sc=baseScale()*view.z;
+  if(ptrs.size===1){view.cx-=(now.x-prev.x)/sc;view.cy-=(now.y-prev.y)/sc}
+  else if(ptrs.size===2&&pinch){const[a,b]=[...ptrs.values()];view.z=pinch.z*Math.hypot(a.x-b.x,a.y-b.y)/pinch.d;
+    view.cx-=(now.x-prev.x)/2/sc;view.cy-=(now.y-prev.y)/2/sc}
+  clampView();drawPhoto();
+});
+const lift=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null};
+finder.addEventListener('pointerup',lift);finder.addEventListener('pointercancel',lift);
+finder.addEventListener('wheel',e=>{if(source!=='photo')return;e.preventDefault();view.z*=Math.exp(-e.deltaY*.002);clampView();drawPhoto()},{passive:false});
+addEventListener('resize',()=>drawPhoto());
+$('liveBtn').addEventListener('click',startCamera);
+
+// History
+let hist=[];try{hist=JSON.parse(localStorage.getItem('swatch-history')||'[]')}catch{}
+function renderHist(){
+  const h=$('history');if(!hist.length)return;h.textContent='';
+  hist.forEach(rgb=>{const b=document.createElement('button');const c=codes(rgb);b.style.background=c.hex;b.title=c.hex;b.setAttribute('aria-label','Show '+c.hex);b.onclick=()=>show(rgb);h.appendChild(b)});
+}
+// Live mode: average several frames to cut sensor noise and flicker.
+function burst(n=8){
+  return new Promise(res=>{const fr=[];const step=()=>{const v=sampleLive();if(v)fr.push(v);if(fr.length>=n||!stream)return res(fr);requestAnimationFrame(step)};step()});
+}
+let busy=false;
+$('shutter').addEventListener('click',async()=>{
+  if(!source){$('file').click();return}
+  if(busy)return;
+  let v,q;
+  if(source==='live'){
+    busy=true;$('shutter').disabled=true;
+    const fr=await burst();busy=false;$('shutter').disabled=false;
+    if(!fr.length)return;
+    v=[0,1,2].map(i=>Math.round(fr.reduce((a,f)=>a+f[i],0)/fr.length));
+    const spread=Math.max(...[0,1,2].map(i=>{const m=v[i];return Math.sqrt(fr.reduce((a,f)=>a+(f[i]-m)**2,0)/fr.length)}));
+    v.std=fr.reduce((a,f)=>a+f.std,0)/fr.length;v.clip=Math.max(...fr.map(f=>f.clip));
+    q=quality(v,spread);
+  }else{v=samplePhoto();q=quality(v)}
+  showQuality(q);
+  const fixed=correct(v);
+  $('raw').hidden=!gain;if(gain)$('raw').textContent='Before calibration: '+codes(v).hex+' · '+codes(v).rgb;
+  show(fixed);v=fixed;hist=[v,...hist].slice(0,20);try{localStorage.setItem('swatch-history',JSON.stringify(hist))}catch{}
+  renderHist();checkAccuracy();toast(q.level==='poor'?'Captured, but '+q.why[0]:'Captured '+codes(v).hex);
+  if(navigator.vibrate)try{navigator.vibrate(15)}catch{}
+});
+
+// Copy
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),1400)}
+document.querySelectorAll('.code').forEach(b=>b.addEventListener('click',()=>{
+  const txt=b.querySelector('span').textContent;
+  const fallback=()=>{const s=getSelection(),r=document.createRange();r.selectNodeContents(b.querySelector('span'));s.removeAllRanges();s.addRange(r);toast('Selected. Copy from the menu')};
+  if(navigator.clipboard?.writeText)navigator.clipboard.writeText(txt).then(()=>toast('Copied '+txt),fallback);else fallback();
+}));
+
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
+  SAMPLE=+b.dataset.size;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  try{localStorage.setItem('swatch-size',SAMPLE)}catch{}
+  if(source==='photo')drawPhoto();
+}));
+try{const sz=+localStorage.getItem('swatch-size');if([5,15,31].includes(sz))document.querySelector('.seg button[data-size="'+sz+'"]').click()}catch{}
+
+function parseHex(t){const m=/^#?([0-9a-f]{6})$/i.exec(t.trim());return m?[0,2,4].map(k=>parseInt(m[1].substr(k,2),16)):null}
+let checked=false;
+function checkAccuracy(){
+  const ref=parseHex($('refHex').value),out=$('checkOut');
+  if(!$('check').open)return;
+  if(!ref){out.textContent='Enter a 6-digit HEX like #3A7BD5.';return}
+  if(!checked){out.textContent='Now scan the colour '+codes(ref).hex+' and press the shutter.';return}
+  const a=lab(ref),b=lab(current),d=Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+  const words=d<1?'Spot on. The difference is invisible to the eye.':d<2.3?'Very close. Only a trained eye side by side would notice.':d<5?'Close. A small difference you might see side by side.':d<10?'Noticeably off. Try calibrating on white paper first.':'Far off. Check the light, glare and that the patch covers only that colour.';
+  const dl=b[0]-a[0];
+  out.innerHTML='';const s=document.createElement('b');s.textContent='\u0394E '+d.toFixed(1)+'. ';out.append(s,words+(Math.abs(dl)>3?(dl>0?' Reading is lighter than the reference.':' Reading is darker than the reference.'):''));
+}
+$('refPick').addEventListener('input',e=>{$('refHex').value=e.target.value.toUpperCase();checked=false;checkAccuracy()});
+$('refHex').addEventListener('input',e=>{const r=parseHex(e.target.value);if(r)$('refPick').value=codes(r).hex.toLowerCase();checked=false;checkAccuracy()});
+$('check').addEventListener('toggle',()=>{checked=false;checkAccuracy()});
+$('shutter').addEventListener('click',()=>{if($('check').open)checked=true},true);
+
+window.__swatch={codes,show,quality,lab};
+
+// Nearest name from the CSS named colours (open W3C list), matched by CIEDE2000-lite (CIE76 in Lab).
+const NAMES='Alice Blue F0F8FF,Antique White FAEBD7,Aqua 00FFFF,Aquamarine 7FFFD4,Azure F0FFFF,Beige F5F5DC,Bisque FFE4C4,Black 000000,Blanched Almond FFEBCD,Blue 0000FF,Blue Violet 8A2BE2,Brown A52A2A,Burlywood DEB887,Cadet Blue 5F9EA0,Chartreuse 7FFF00,Chocolate D2691E,Coral FF7F50,Cornflower Blue 6495ED,Cornsilk FFF8DC,Crimson DC143C,Dark Blue 00008B,Dark Cyan 008B8B,Dark Goldenrod B8860B,Dark Grey A9A9A9,Dark Green 006400,Dark Khaki BDB76B,Dark Magenta 8B008B,Dark Olive Green 556B2F,Dark Orange FF8C00,Dark Orchid 9932CC,Dark Red 8B0000,Dark Salmon E9967A,Dark Sea Green 8FBC8F,Dark Slate Blue 483D8B,Dark Slate Grey 2F4F4F,Dark Turquoise 00CED1,Dark Violet 9400D3,Deep Pink FF1493,Deep Sky Blue 00BFFF,Dim Grey 696969,Dodger Blue 1E90FF,Firebrick B22222,Floral White FFFAF0,Forest Green 228B22,Fuchsia FF00FF,Gainsboro DCDCDC,Ghost White F8F8FF,Gold FFD700,Goldenrod DAA520,Grey 808080,Green 008000,Green Yellow ADFF2F,Honeydew F0FFF0,Hot Pink FF69B4,Indian Red CD5C5C,Indigo 4B0082,Ivory FFFFF0,Khaki F0E68C,Lavender E6E6FA,Lavender Blush FFF0F5,Lawn Green 7CFC00,Lemon Chiffon FFFACD,Light Blue ADD8E6,Light Coral F08080,Light Cyan E0FFFF,Light Goldenrod Yellow FAFAD2,Light Grey D3D3D3,Light Green 90EE90,Light Pink FFB6C1,Light Salmon FFA07A,Light Sea Green 20B2AA,Light Sky Blue 87CEFA,Light Slate Grey 778899,Light Steel Blue B0C4DE,Light Yellow FFFFE0,Lime 00FF00,Lime Green 32CD32,Linen FAF0E6,Maroon 800000,Medium Aquamarine 66CDAA,Medium Blue 0000CD,Medium Orchid BA55D3,Medium Purple 9370DB,Medium Sea Green 3CB371,Medium Slate Blue 7B68EE,Medium Spring Green 00FA9A,Medium Turquoise 48D1CC,Medium Violet Red C71585,Midnight Blue 191970,Mint Cream F5FFFA,Misty Rose FFE4E1,Moccasin FFE4B5,Navajo White FFDEAD,Navy 000080,Old Lace FDF5E6,Olive 808000,Olive Drab 6B8E23,Orange FFA500,Orange Red FF4500,Orchid DA70D6,Pale Goldenrod EEE8AA,Pale Green 98FB98,Pale Turquoise AFEEEE,Pale Violet Red DB7093,Papaya Whip FFEFD5,Peach Puff FFDAB9,Peru CD853F,Pink FFC0CB,Plum DDA0DD,Powder Blue B0E0E6,Purple 800080,Rebecca Purple 663399,Red FF0000,Rosy Brown BC8F8F,Royal Blue 4169E1,Saddle Brown 8B4513,Salmon FA8072,Sandy Brown F4A460,Sea Green 2E8B57,Seashell FFF5EE,Sienna A0522D,Silver C0C0C0,Sky Blue 87CEEB,Slate Blue 6A5ACD,Slate Grey 708090,Snow FFFAFA,Spring Green 00FF7F,Steel Blue 4682B4,Tan D2B48C,Teal 008080,Thistle D8BFD8,Tomato FF6347,Turquoise 40E0D0,Violet EE82EE,Wheat F5DEB3,White FFFFFF,White Smoke F5F5F5,Yellow FFFF00,Yellow Green 9ACD32'.split(',').map(e=>{const i=e.lastIndexOf(' '),h=e.slice(i+1);return{n:e.slice(0,i),hex:'#'+h,lab:lab([0,2,4].map(k=>parseInt(h.substr(k,2),16)))}});
+function lab(rgb){
+  const [r,g,b]=rgb.map(toLin);
+  let x=(r*.4124+g*.3576+b*.1805)/.95047,y=r*.2126+g*.7152+b*.0722,z=(r*.0193+g*.1192+b*.9505)/1.08883;
+  const f=t=>t>.008856?Math.cbrt(t):7.787*t+16/116;x=f(x);y=f(y);z=f(z);
+  return[116*y-16,500*(x-y),200*(y-z)];
+}
+function nearest(rgb){
+  const L=lab(rgb);let best=null,bd=1e9;
+  for(const c of NAMES){const d=Math.hypot(L[0]-c.lab[0],L[1]-c.lab[1],L[2]-c.lab[2]);if(d<bd){bd=d;best=c}}
+  return{...best,d:bd};
+}
+// WCAG 2 contrast ratio
+function lum(rgb){const[r,g,b]=rgb.map(toLin);return .2126*r+.7152*g+.0722*b}
+function ratio(a,b){const[x,y]=[lum(a),lum(b)].sort((p,q)=>q-p);return(x+.05)/(y+.05)}
+function grade(r){return r>=7?'AAA':r>=4.5?'AA':r>=3?'AA large':'Fail'}
+function extras(rgb){
+  const n=nearest(rgb),hex=codes(rgb).hex;
+  $('nameDot').style.background=n.hex;$('name').textContent=n.n;
+  $('nameNote').textContent=n.d<2.3?'exact match':n.d<6?'very close ('+n.hex+')':n.d<15?'close ('+n.hex+')':'nearest ('+n.hex+'), not a close match';
+  for(const[id,bg]of[['cW',[255,255,255]],['cB',[0,0,0]]]){
+    const r=ratio(rgb,bg),g=grade(r),el=$(id);
+    el.querySelector('.sample').style.color=hex;
+    el.querySelector('.ratio').textContent=r.toFixed(2)+':1';
+    const t=el.querySelector('.grade');t.textContent=g;t.dataset.pass=g!=='Fail';
+  }
+}
+
+if(document.querySelector('link[rel=manifest]')&&'serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+renderHist();show(current);startCamera();loop();
+})();
+</script>
+
+</body></html>
